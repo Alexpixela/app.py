@@ -26,7 +26,7 @@ st.markdown(
 st.markdown(
     """
     <div class="banner-container">
-        <img src="https://tu-imagen.com/banner.jpg" alt="Banner de la compañía">
+        <img src="https://github.com/Alexpixela/app.py/blob/main/go-xpert.png?raw=true" alt="Banner de la compañía">
     </div>
     """,
     unsafe_allow_html=True
