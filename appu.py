@@ -4,8 +4,6 @@ from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
 from openpyxl import Workbook
 from io import BytesIO
 
-# 🔍 **Título de la aplicación**
-st.title("🔍 Analizador de Coincidencias - SMART")
 st.set_page_config(page_title="Analizador de Excel", page_icon="🔍", layout="wide")
 st.title("🔍 Analizador de Coincidencias - SMART")
 
@@ -137,5 +135,4 @@ if archivo1 and archivo2:
                 data=excel_data,
                 file_name="reporte-GoXperts.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
             )
