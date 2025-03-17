@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from io import BytesIO
 
 # 📌 Estilos para centrar el banner
-st.image("go-xpert.png", use_column_width=True)
+st.image("go-xpert.png", use_container_width=True)
 
 # 🔍 **Título de la aplicación**
 st.title("🔍 Analizador de Coincidencias - SMART")
