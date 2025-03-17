@@ -3,7 +3,37 @@ import pandas as pd
 from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
 from openpyxl import Workbook
 from io import BytesIO
+# 📌 Estilos para centrar la imagen en la parte superior
+st.markdown(
+    """
+    <style>
+        .banner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 0;
+        }
+        .banner-container img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+# 📌 Imagen del banner (Reemplaza "banner.png" con la ruta o URL de tu imagen)
+st.markdown(
+    """
+    <div class="banner-container">
+        <img src="https://tu-imagen.com/banner.jpg" alt="Banner de la compañía">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# 🔍 **Título de la aplicación**
+st.title("🔍 Analizador de Coincidencias - SMART")
 st.set_page_config(page_title="Analizador de Excel", page_icon="🔍", layout="wide")
 st.title("🔍 Analizador de Coincidencias - SMART")
 
