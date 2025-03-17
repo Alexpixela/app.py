@@ -5,33 +5,7 @@ from openpyxl import Workbook
 from io import BytesIO
 
 # 📌 Estilos para centrar el banner
-st.image(
-    """
-    <style>
-        .banner-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px 0;
-        }
-        .banner-container img {
-            max-width: 80%; /* Ajusta el tamaño del banner */
-            height: auto;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# 📌 Imagen del banner (Cambia por la URL o la ruta del archivo local)
-st.image(
-    """
-    <div class="banner-container">
-        <img src="go-xpert.png" alt="Banner de la compañía">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.image("go-xpert.png", use_column_width=True)
 
 # 🔍 **Título de la aplicación**
 st.title("🔍 Analizador de Coincidencias - SMART")
