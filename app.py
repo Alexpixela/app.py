@@ -79,20 +79,27 @@ if archivo1 and archivo2:
             df_emparejados = emparejar_bases(df1, df2, col1, col2, umbral)
 
             # 📊 **Filtrado de Resultados**
-            filtro_min_similitud = st.slider("📊 Filtrar por porcentaje mínimo de coincidencia", 0, 100, 50)
-            df_filtrado = df_emparejados[df_emparejados["Similitud (%)"] >= filtro_min_similitud]
+            filtro_estado = st.selectbox("📊 Filtrar resultados", ["Todos", "Solo coincidencias", "Solo sin coincidencias"])
+
+            if filtro_estado == "Solo coincidencias":
+                df_filtrado = df_emparejados[df_emparejados["Estado"] == "Coincidencia"]
+            elif filtro_estado == "Solo sin coincidencias":
+                df_filtrado = df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"]
+            else:
+                df_filtrado = df_emparejados
 
             # 📊 **Estadísticas**
             total_base1 = len(df1)
             total_base2 = len(df2)
-            coincidencias = len(df_filtrado[df_filtrado["Estado"] == "Coincidencia"])
+            coincidencias = len(df_emparejados[df_emparejados["Estado"] == "Coincidencia"])
+            sin_coincidencia = len(df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"])
             porcentaje1 = f"{(coincidencias / total_base1 * 100):.2f}%" if total_base1 > 0 else "0.00%"
             porcentaje2 = f"{(coincidencias / total_base2 * 100):.2f}%" if total_base2 > 0 else "0.00%"
 
             df_estadisticas = pd.DataFrame({
-                "Métrica": ["Total registros", "Coincidencias", "Porcentaje coincidencia"],
-                f"Base {col1}": [total_base1, coincidencias, porcentaje1],
-                f"Base {col2}": [total_base2, coincidencias, porcentaje2]
+                "Métrica": ["Total registros", "Coincidencias", "Sin coincidencia", "Porcentaje coincidencia"],
+                f"Base {col1}": [total_base1, coincidencias, sin_coincidencia, porcentaje1],
+                f"Base {col2}": [total_base2, coincidencias, sin_coincidencia, porcentaje2]
             })
 
             # 🖥️ **Mostrar Resultados**
@@ -110,15 +117,18 @@ if archivo1 and archivo2:
 
             # 📥 **Función para Descargar Reporte en Excel**
             @st.cache_data
-            def convertir_a_excel(df1, df2, df3):
+            def convertir_a_excel(df1, df2, df3, df_no_coincidencias):
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df1.to_excel(writer, sheet_name="Emparejamiento", index=False)
+                    df1.to_excel(writer, sheet_name="Coincidencias", index=False)
+                    df_no_coincidencias.to_excel(writer, sheet_name="Sin Coincidencia", index=False)
                     df2.to_excel(writer, sheet_name="Duplicados", index=False)
                     df3.to_excel(writer, sheet_name="Estadísticas", index=False)
                 return output.getvalue()
 
-            excel_data = convertir_a_excel(df_filtrado, duplicados_base1, df_estadisticas)
+            df_no_coincidencias = df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"]
+            excel_data = convertir_a_excel(df_filtrado, duplicados_base1, df_estadisticas, df_no_coincidencias)
+
             st.download_button(
                 label="📥 Descargar reporte en Excel",
                 data=excel_data,
