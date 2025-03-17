@@ -41,15 +41,21 @@ if archivo1 and archivo2:
             df1 = limpiar_texto(df1, col1)
             df2 = limpiar_texto(df2, col2)
 
-            # 🔍 **Detección de duplicados**
-            duplicados_base1 = df1[df1.duplicated(subset=col1, keep=False)][col1].drop_duplicates()
-            duplicados_base2 = df2[df2.duplicated(subset=col2, keep=False)][col2].drop_duplicates()
+            # 🔍 **Detección de duplicados por cada columna**
+            duplicados_dict = {}
+            for c1, c2 in zip(col1, col2):
+                duplicados_dict[f"Duplicados {c1}"] = df1[df1.duplicated(subset=[c1], keep=False)][[c1]].drop_duplicates()
+                duplicados_dict[f"Duplicados {c2}"] = df2[df2.duplicated(subset=[c2], keep=False)][[c2]].drop_duplicates()
+
+            # 🔥 **Eliminamos los valores duplicados antes de comparar**
+            df1_sin_dup = df1.drop_duplicates(subset=col1)
+            df2_sin_dup = df2.drop_duplicates(subset=col2)
 
             # 🔥 **Optimización del Emparejamiento**
             def emparejar_bases(df1, df2, col1, col2, threshold):
                 emparejados = []
                 
-                # ✅ CORRECCIÓN: Convertir las filas en tuplas correctamente
+                # ✅ Convertir filas en tuplas para comparación
                 base1_set = df1[col1].astype(str).apply(tuple, axis=1).values.tolist()
                 base2_set = df2[col2].astype(str).apply(tuple, axis=1).values.tolist()
                 
@@ -75,22 +81,12 @@ if archivo1 and archivo2:
                 progreso.empty()
                 return pd.DataFrame(emparejados, columns=col1 + col2 + ['Similitud (%)', 'Estado'])
 
-            # 🔥 **Ejecutar emparejamiento**
-            df_emparejados = emparejar_bases(df1, df2, col1, col2, umbral)
-
-            # 📊 **Filtrado de Resultados**
-            filtro_estado = st.selectbox("📊 Filtrar resultados", ["Todos", "Solo coincidencias", "Solo sin coincidencias"])
-
-            if filtro_estado == "Solo coincidencias":
-                df_filtrado = df_emparejados[df_emparejados["Estado"] == "Coincidencia"]
-            elif filtro_estado == "Solo sin coincidencias":
-                df_filtrado = df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"]
-            else:
-                df_filtrado = df_emparejados
+            # 🔥 **Ejecutar emparejamiento sin duplicados**
+            df_emparejados = emparejar_bases(df1_sin_dup, df2_sin_dup, col1, col2, umbral)
 
             # 📊 **Estadísticas**
-            total_base1 = len(df1)
-            total_base2 = len(df2)
+            total_base1 = len(df1_sin_dup)
+            total_base2 = len(df2_sin_dup)
             coincidencias = len(df_emparejados[df_emparejados["Estado"] == "Coincidencia"])
             sin_coincidencia = len(df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"])
             porcentaje1 = f"{(coincidencias / total_base1 * 100):.2f}%" if total_base1 > 0 else "0.00%"
@@ -104,30 +100,28 @@ if archivo1 and archivo2:
 
             # 🖥️ **Mostrar Resultados**
             st.write("### 📊 Resultados del Análisis")
-            st.data_editor(df_filtrado, num_rows="dynamic")
-
-            st.write("### 🔄 Duplicados encontrados")
-            st.write(f"📌 **Duplicados en {col1}**:")
-            st.dataframe(duplicados_base1)
-            st.write(f"📌 **Duplicados en {col2}**:")
-            st.dataframe(duplicados_base2)
+            st.data_editor(df_emparejados, num_rows="dynamic")
 
             st.write("### 📈 Estadísticas")
             st.dataframe(df_estadisticas)
 
             # 📥 **Función para Descargar Reporte en Excel**
             @st.cache_data
-            def convertir_a_excel(df1, df2, df3, df_no_coincidencias):
+            def convertir_a_excel(df1, df2, df3, duplicados_dict):
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df1.to_excel(writer, sheet_name="Coincidencias", index=False)
-                    df_no_coincidencias.to_excel(writer, sheet_name="Sin Coincidencia", index=False)
-                    df2.to_excel(writer, sheet_name="Duplicados", index=False)
+                    df2.to_excel(writer, sheet_name="Sin Coincidencia", index=False)
                     df3.to_excel(writer, sheet_name="Estadísticas", index=False)
+                    
+                    # Agregar hojas separadas para cada columna con duplicados
+                    for nombre, df in duplicados_dict.items():
+                        df.to_excel(writer, sheet_name=nombre[:31], index=False)  # Limita a 31 caracteres
+                    
                 return output.getvalue()
 
             df_no_coincidencias = df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"]
-            excel_data = convertir_a_excel(df_filtrado, duplicados_base1, df_estadisticas, df_no_coincidencias)
+            excel_data = convertir_a_excel(df_emparejados, df_no_coincidencias, df_estadisticas, duplicados_dict)
 
             st.download_button(
                 label="📥 Descargar reporte en Excel",
