@@ -3,6 +3,8 @@ import pandas as pd
 from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
 from openpyxl import Workbook
 from io import BytesIO
+from PIL import Image
+import streamlit as st
 
 # 📌 Cargar la imagen original
 imagen = Image.open("go-xpert.png")
