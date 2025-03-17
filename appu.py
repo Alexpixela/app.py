@@ -4,9 +4,15 @@ from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
 from openpyxl import Workbook
 from io import BytesIO
 
-# 📌 Estilos para centrar el banner
-st.image("go-xpert.png", use_container_width=True)
+# 📌 Cargar la imagen original
+imagen = Image.open("go-xpert.png")
 
+# 📌 Redimensionar la imagen al 50% de su tamaño original
+nuevo_tamano = (imagen.width // 2, imagen.height // 2)
+imagen_reducida = imagen.resize(nuevo_tamano)
+
+# 📌 Mostrar la imagen en Streamlit (sin advertencias)
+st.image(imagen_reducida)
 # 🔍 **Título de la aplicación**
 st.title("🔍 Analizador de Coincidencias - SMART")
 
