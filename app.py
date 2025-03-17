@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from io import BytesIO
 
 st.set_page_config(page_title="Analizador de Excel", page_icon="🔍", layout="wide")
-st.title("🔍 Analizador de Coincidencias - SMART - ")
+st.title("🔍 Analizador de Coincidencias - SMART")
 
 st.write("Sube dos archivos de Excel y selecciona las hojas y columnas a comparar.")
 
@@ -84,11 +84,15 @@ if archivo1 and archivo2:
             # 🔥 **Ejecutar emparejamiento sin duplicados**
             df_emparejados = emparejar_bases(df1_sin_dup, df2_sin_dup, col1, col2, umbral)
 
+            # 📊 **Separar Coincidencias y Sin Coincidencia**
+            df_coincidencias = df_emparejados[df_emparejados["Estado"] == "Coincidencia"]
+            df_sin_coincidencia = df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"]
+
             # 📊 **Estadísticas**
             total_base1 = len(df1_sin_dup)
             total_base2 = len(df2_sin_dup)
-            coincidencias = len(df_emparejados[df_emparejados["Estado"] == "Coincidencia"])
-            sin_coincidencia = len(df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"])
+            coincidencias = len(df_coincidencias)
+            sin_coincidencia = len(df_sin_coincidencia)
             porcentaje1 = f"{(coincidencias / total_base1 * 100):.2f}%" if total_base1 > 0 else "0.00%"
             porcentaje2 = f"{(coincidencias / total_base2 * 100):.2f}%" if total_base2 > 0 else "0.00%"
 
@@ -99,19 +103,22 @@ if archivo1 and archivo2:
             })
 
             # 🖥️ **Mostrar Resultados**
-            st.write("### 📊 Resultados del Análisis")
-            st.data_editor(df_emparejados, num_rows="dynamic")
+            st.write("### 📊 Coincidencias Encontradas")
+            st.data_editor(df_coincidencias, num_rows="dynamic")
+
+            st.write("### ❌ Registros Sin Coincidencia")
+            st.data_editor(df_sin_coincidencia, num_rows="dynamic")
 
             st.write("### 📈 Estadísticas")
             st.dataframe(df_estadisticas)
 
             # 📥 **Función para Descargar Reporte en Excel**
             @st.cache_data
-            def convertir_a_excel(df1, df2, df3, duplicados_dict):
+            def convertir_a_excel(df_coincidencias, df_sin_coincidencia, df3, duplicados_dict):
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df1.to_excel(writer, sheet_name="Coincidencias", index=False)
-                    df2.to_excel(writer, sheet_name="Sin Coincidencia", index=False)
+                    df_coincidencias.to_excel(writer, sheet_name="Coincidencias", index=False)
+                    df_sin_coincidencia.to_excel(writer, sheet_name="Sin Coincidencia", index=False)
                     df3.to_excel(writer, sheet_name="Estadísticas", index=False)
                     
                     # Agregar hojas separadas para cada columna con duplicados
@@ -120,8 +127,7 @@ if archivo1 and archivo2:
                     
                 return output.getvalue()
 
-            df_no_coincidencias = df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"]
-            excel_data = convertir_a_excel(df_emparejados, df_no_coincidencias, df_estadisticas, duplicados_dict)
+            excel_data = convertir_a_excel(df_coincidencias, df_sin_coincidencia, df_estadisticas, duplicados_dict)
 
             st.download_button(
                 label="📥 Descargar reporte en Excel",
