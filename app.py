@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from rapidfuzz import process, fuzz  # ⚡ MÁS RÁPIDO QUE FUZZYWUZZY
+from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
 from openpyxl import Workbook
 from io import BytesIO
 
@@ -24,59 +24,68 @@ if archivo1 and archivo2:
         df1 = pd.read_excel(excel1, sheet_name=hoja1)
         df2 = pd.read_excel(excel2, sheet_name=hoja2)
 
-        col1 = st.selectbox("📊 Selecciona la columna del primer archivo", df1.columns)
-        col2 = st.selectbox("📊 Selecciona la columna del segundo archivo", df2.columns)
+        # Selección de múltiples columnas
+        col1 = st.multiselect("📊 Selecciona las columnas del primer archivo", df1.columns)
+        col2 = st.multiselect("📊 Selecciona las columnas del segundo archivo", df2.columns)
 
-        if col1 and col2:
+        if col1 and col2 and len(col1) == len(col2):
             umbral = st.slider("🎯 Umbral de similitud (0-100)", min_value=0, max_value=100, value=80)
 
-            base1 = df1[col1].dropna().astype(str).str.lower().str.strip().unique()
-            base2 = df2[col2].dropna().astype(str).str.lower().str.strip().unique()
+            # 🔄 **Normalización y limpieza de datos**
+            def limpiar_texto(df, columnas):
+                for col in columnas:
+                    df[col] = df[col].astype(str).str.lower().str.strip()
+                    df[col] = df[col].str.replace(r'\s+', ' ', regex=True)  # Quita espacios extra
+                return df
+
+            df1 = limpiar_texto(df1, col1)
+            df2 = limpiar_texto(df2, col2)
 
             # 🔍 **Detección de duplicados**
-            duplicados_base1 = df1[df1.duplicated(subset=[col1], keep=False)][col1].unique()
-            duplicados_base2 = df2[df2.duplicated(subset=[col2], keep=False)][col2].unique()
+            duplicados_base1 = df1[df1.duplicated(subset=col1, keep=False)][col1].drop_duplicates()
+            duplicados_base2 = df2[df2.duplicated(subset=col2, keep=False)][col2].drop_duplicates()
 
-            # 🔄 **Optimización del Emparejamiento con rapidfuzz**
-            def emparejar_bases(base1, base2, threshold):
+            # 🔥 **Optimización del Emparejamiento**
+            def emparejar_bases(df1, df2, col1, col2, threshold):
                 emparejados = []
-                base2_usada = set()
-                progreso = st.progress(0)  # Indicador de progreso
+                
+                # ✅ CORRECCIÓN: Convertir las filas en tuplas correctamente
+                base1_set = df1[col1].astype(str).apply(tuple, axis=1).values.tolist()
+                base2_set = df2[col2].astype(str).apply(tuple, axis=1).values.tolist()
+                
+                progreso = st.progress(0)
 
-                total = len(base1)
-                for i, nombre1 in enumerate(base1):
+                total = len(base1_set)
+                for i, row_tuple in enumerate(base1_set):
                     progreso.progress((i + 1) / total)
 
-                    if pd.isna(nombre1):
-                        continue
-
-                    match = process.extractOne(
-                        nombre1, 
-                        [n for n in base2 if n not in base2_usada], 
-                        scorer=fuzz.token_sort_ratio
-                    )
+                    # Busca la mejor coincidencia en base2
+                    match = process.extractOne(row_tuple, base2_set, scorer=fuzz.token_sort_ratio)
 
                     if match and match[1] >= threshold:
-                        emparejados.append([nombre1, match[0], match[1], 'Coincidencia'])
-                        base2_usada.add(match[0])
+                        emparejados.append(list(row_tuple) + list(match[0]) + [match[1], 'Coincidencia'])
+                        base2_set.remove(match[0])  # Evita reutilizar coincidencias
                     else:
-                        emparejados.append([nombre1, None, 0, 'Sin coincidencia'])
+                        emparejados.append(list(row_tuple) + [None] * len(col2) + [0, 'Sin coincidencia'])
 
                 # Agregar elementos no coincidentes de base2
-                for nombre2 in base2:
-                    if nombre2 not in base2_usada:
-                        emparejados.append([None, nombre2, 0, 'Sin coincidencia'])
+                for row in base2_set:
+                    emparejados.append([None] * len(col1) + list(row) + [0, 'Sin coincidencia'])
 
-                progreso.empty()  # Oculta la barra de progreso
-                return pd.DataFrame(emparejados, columns=[f'Base {col1}', f'Base {col2}', 'Similitud (%)', 'Estado'])
+                progreso.empty()
+                return pd.DataFrame(emparejados, columns=col1 + col2 + ['Similitud (%)', 'Estado'])
 
             # 🔥 **Ejecutar emparejamiento**
-            df_emparejados = emparejar_bases(base1, base2, umbral)
+            df_emparejados = emparejar_bases(df1, df2, col1, col2, umbral)
+
+            # 📊 **Filtrado de Resultados**
+            filtro_min_similitud = st.slider("📊 Filtrar por porcentaje mínimo de coincidencia", 0, 100, 50)
+            df_filtrado = df_emparejados[df_emparejados["Similitud (%)"] >= filtro_min_similitud]
 
             # 📊 **Estadísticas**
-            total_base1 = len(base1)
-            total_base2 = len(base2)
-            coincidencias = len(df_emparejados[df_emparejados["Estado"] == "Coincidencia"])
+            total_base1 = len(df1)
+            total_base2 = len(df2)
+            coincidencias = len(df_filtrado[df_filtrado["Estado"] == "Coincidencia"])
             porcentaje1 = f"{(coincidencias / total_base1 * 100):.2f}%" if total_base1 > 0 else "0.00%"
             porcentaje2 = f"{(coincidencias / total_base2 * 100):.2f}%" if total_base2 > 0 else "0.00%"
 
@@ -88,13 +97,13 @@ if archivo1 and archivo2:
 
             # 🖥️ **Mostrar Resultados**
             st.write("### 📊 Resultados del Análisis")
-            st.dataframe(df_emparejados)
+            st.data_editor(df_filtrado, num_rows="dynamic")
 
             st.write("### 🔄 Duplicados encontrados")
             st.write(f"📌 **Duplicados en {col1}**:")
-            st.dataframe(pd.DataFrame(duplicados_base1, columns=[col1]))
+            st.dataframe(duplicados_base1)
             st.write(f"📌 **Duplicados en {col2}**:")
-            st.dataframe(pd.DataFrame(duplicados_base2, columns=[col2]))
+            st.dataframe(duplicados_base2)
 
             st.write("### 📈 Estadísticas")
             st.dataframe(df_estadisticas)
@@ -105,12 +114,11 @@ if archivo1 and archivo2:
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df1.to_excel(writer, sheet_name="Emparejamiento", index=False)
-                    pd.DataFrame(duplicados_base1, columns=[col1]).to_excel(writer, sheet_name=f"Duplicados {col1}", index=False)
-                    pd.DataFrame(duplicados_base2, columns=[col2]).to_excel(writer, sheet_name=f"Duplicados {col2}", index=False)
+                    df2.to_excel(writer, sheet_name="Duplicados", index=False)
                     df3.to_excel(writer, sheet_name="Estadísticas", index=False)
                 return output.getvalue()
 
-            excel_data = convertir_a_excel(df_emparejados, duplicados_base1, df_estadisticas)
+            excel_data = convertir_a_excel(df_filtrado, duplicados_base1, df_estadisticas)
             st.download_button(
                 label="📥 Descargar reporte en Excel",
                 data=excel_data,
