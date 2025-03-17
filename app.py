@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from io import BytesIO
 
 st.set_page_config(page_title="Analizador de Excel", page_icon="🔍", layout="wide")
-st.title("🔍 Analizador de Coincidencias - SMART")
+st.title("🔍 Analizador de Coincidencias - SMART - ")
 
 st.write("Sube dos archivos de Excel y selecciona las hojas y columnas a comparar.")
 
