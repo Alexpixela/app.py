@@ -3,8 +3,19 @@ import pandas as pd
 from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
 from openpyxl import Workbook
 from io import BytesIO
+from PIL import Image
+import streamlit as st
 
-st.set_page_config(page_title="Analizador de Excel", page_icon="🔍", layout="wide")
+# 📌 Cargar la imagen original
+imagen = Image.open("go-xpert.png")
+
+# 📌 Redimensionar la imagen al 50% de su tamaño original
+nuevo_tamano = (imagen.width // 2, imagen.height // 2)
+imagen_reducida = imagen.resize(nuevo_tamano)
+
+# 📌 Mostrar la imagen en Streamlit (sin advertencias)
+st.image(imagen_reducida)
+# 🔍 **Título de la aplicación**
 st.title("🔍 Analizador de Coincidencias - SMART")
 
 st.write("Sube dos archivos de Excel y selecciona las hojas y columnas a comparar.")
@@ -74,9 +85,10 @@ if archivo1 and archivo2:
                     else:
                         emparejados.append(list(row_tuple) + [None] * len(col2) + [0, 'Sin coincidencia'])
 
-                # Agregar elementos no coincidentes de base2
+                # Agregar elementos no coincidentes de base2, evitando celdas vacías
                 for row in base2_set:
-                    emparejados.append([None] * len(col1) + list(row) + [0, 'Sin coincidencia'])
+                    if any(row):  # Solo agrega filas si tienen algún valor válido
+                        emparejados.append([None] * len(col1) + list(row) + [0, 'Sin coincidencia'])
 
                 progreso.empty()
                 return pd.DataFrame(emparejados, columns=col1 + col2 + ['Similitud (%)', 'Estado'])
