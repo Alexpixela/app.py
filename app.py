@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
-from fuzzywuzzy import fuzz, process
+from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
 from openpyxl import Workbook
 from io import BytesIO
+from PIL import Image
 
 # 📌 Cargar la imagen original
 imagen = Image.open("go-xpert.png")
@@ -15,17 +16,15 @@ imagen_reducida = imagen.resize(nuevo_tamano)
 st.image(imagen_reducida)
 
 st.set_page_config(page_title="Analizador de Excel", page_icon="🔍", layout="wide")
-
 st.title("🔍 Analizador de Coincidencias - SMART")
 
 st.write("Sube dos archivos de Excel y selecciona las hojas y columnas a comparar.")
 
-# Subir archivos
+# 📂 **Carga de archivos**
 archivo1 = st.file_uploader("📂 Sube el primer archivo Excel", type=["xlsx"])
 archivo2 = st.file_uploader("📂 Sube el segundo archivo Excel", type=["xlsx"])
 
 if archivo1 and archivo2:
-    # Cargar hojas de los archivos
     excel1 = pd.ExcelFile(archivo1)
     excel2 = pd.ExcelFile(archivo2)
 
@@ -46,8 +45,8 @@ if archivo1 and archivo2:
             base2 = df2[col2].dropna().astype(str).str.lower().str.strip()
 
             # 🔍 **Detectar duplicados**
-            duplicados_base1 = base1[base1.duplicated(keep=False)].unique()
-            duplicados_base2 = base2[base2.duplicated(keep=False)].unique()
+            duplicados_base1 = pd.DataFrame(base1[base1.duplicated(keep=False)].unique(), columns=[col1])
+            duplicados_base2 = pd.DataFrame(base2[base2.duplicated(keep=False)].unique(), columns=[col2])
 
             # 🔄 **Fuzzy Matching**
             def emparejar_bases(base1, base2, threshold):
@@ -56,8 +55,7 @@ if archivo1 and archivo2:
 
                 for nombre1 in base1:
                     if pd.isna(nombre1): continue
-                    match = process.extractOne(nombre1, [n for n in base2 if n not in base2_usada], 
-                                             scorer=fuzz.token_sort_ratio)
+                    match = process.extractOne(nombre1, [n for n in base2 if n not in base2_usada], scorer=fuzz.token_sort_ratio)
                     if match and match[1] >= threshold:
                         emparejados.append([nombre1, match[0], match[1], 'Coincidencia'])
                         base2_usada.add(match[0])
@@ -85,32 +83,27 @@ if archivo1 and archivo2:
                 f"Base {col2}": [total_base2, coincidencias, porcentaje2]
             })
 
-            # Mostrar resultados en la web
+            # 📊 **Mostrar resultados**
             st.write("### 📊 Resultados del Análisis")
             st.dataframe(df_emparejados)
 
             st.write("### 🔄 Duplicados encontrados")
-            st.write(f"📌 **Duplicados en {col1}**:")
-            st.dataframe(pd.DataFrame(duplicados_base1, columns=[col1]))
-            st.write(f"📌 **Duplicados en {col2}**:")
-            st.dataframe(pd.DataFrame(duplicados_base2, columns=[col2]))
+            st.dataframe(duplicados_base1)
+            st.dataframe(duplicados_base2)
 
             st.write("### 📈 Estadísticas")
             st.dataframe(df_estadisticas)
 
             # 📥 **Descarga del archivo en Excel**
             @st.cache_data
-            def convertir_a_excel(df1, df2, df3):
+            def convertir_a_excel():
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df1.to_excel(writer, sheet_name="Emparejamiento", index=False)
-                    pd.DataFrame(duplicados_base1, columns=[col1]).to_excel(writer, sheet_name=f"Duplicados {col1}", index=False)
-                    pd.DataFrame(duplicados_base2, columns=[col2]).to_excel(writer, sheet_name=f"Duplicados {col2}", index=False)
-                    df3.to_excel(writer, sheet_name="Estadísticas", index=False)
+                    df_emparejados.to_excel(writer, sheet_name="Emparejamiento", index=False)
+                    duplicados_base1.to_excel(writer, sheet_name=f"Duplicados {col1}", index=False)
+                    duplicados_base2.to_excel(writer, sheet_name=f"Duplicados {col2}", index=False)
+                    df_estadisticas.to_excel(writer, sheet_name="Estadísticas", index=False)
                 return output.getvalue()
 
-            excel_data = convertir_a_excel(df_emparejados, duplicados_base1, df_estadisticas)
-            st.download_button(label="📥 Descargar reporte en Excel",
-                               data=excel_data,
-                               file_name="reporte-GoXperts.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            excel_data = convertir_a_excel()
+            st.download_button(label="📥 Descargar reporte en Excel", data=excel_data, file_name="reporte-GoXperts.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
