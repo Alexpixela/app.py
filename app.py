@@ -35,24 +35,21 @@ if archivo1 and archivo2:
         df1 = pd.read_excel(excel1, sheet_name=hoja1)
         df2 = pd.read_excel(excel2, sheet_name=hoja2)
 
-        # Selección de múltiples columnas
         col1 = st.multiselect("📊 Selecciona las columnas del primer archivo", df1.columns)
         col2 = st.multiselect("📊 Selecciona las columnas del segundo archivo", df2.columns)
 
         if col1 and col2 and len(col1) == len(col2):
             umbral = st.slider("🎯 Umbral de similitud (0-100)", min_value=0, max_value=100, value=80)
 
-            # 🔄 **Normalización y limpieza de datos**
             def limpiar_texto(df, columnas):
                 for col in columnas:
                     df[col] = df[col].astype(str).str.lower().str.strip()
-                    df[col] = df[col].str.replace(r'\s+', ' ', regex=True)  # Quita espacios extra
+                    df[col] = df[col].str.replace(r'\s+', ' ', regex=True)
                 return df
 
             df1 = limpiar_texto(df1, col1)
             df2 = limpiar_texto(df2, col2)
 
-            # 🔥 **Optimización del Emparejamiento**
             def emparejar_bases(df1, df2, col1, col2, threshold):
                 emparejados = []
                 base1_set = df1[col1].astype(str).apply(tuple, axis=1).tolist()
@@ -79,38 +76,23 @@ if archivo1 and archivo2:
 
             df_emparejados = emparejar_bases(df1, df2, col1, col2, umbral)
             df_coincidencias = df_emparejados[df_emparejados["Estado"] == "Coincidencia"]
-
-            # 📊 **Estadísticas**
-            total_base1 = len(df1)
-            total_base2 = len(df2)
-            coincidencias = len(df_coincidencias)
-            porcentaje1 = f"{(coincidencias / total_base1 * 100):.2f}%" if total_base1 > 0 else "0.00%"
-            porcentaje2 = f"{(coincidencias / total_base2 * 100):.2f}%" if total_base2 > 0 else "0.00%"
+            df_sin_coincidencia = df_emparejados[df_emparejados["Estado"] == "Sin coincidencia"]
 
             df_estadisticas = pd.DataFrame({
-                "Métrica": ["Total registros", "Coincidencias", "Porcentaje coincidencia"],
-                f"Base {col1}": [total_base1, coincidencias, porcentaje1],
-                f"Base {col2}": [total_base2, coincidencias, porcentaje2]
+                "Métrica": ["Total registros", "Coincidencias", "Sin coincidencia", "Porcentaje coincidencia"],
+                f"Base {col1}": [len(df1), len(df_coincidencias), len(df_sin_coincidencia), f"{(len(df_coincidencias) / len(df1) * 100):.2f}%"],
+                f"Base {col2}": [len(df2), len(df_coincidencias), len(df_sin_coincidencia), f"{(len(df_coincidencias) / len(df2) * 100):.2f}%"]
             })
 
-            st.write("### 📊 Coincidencias Encontradas")
-            st.data_editor(df_coincidencias, num_rows="dynamic")
-
-            st.write("### 📈 Estadísticas")
-            st.dataframe(df_estadisticas)
-
             @st.cache_data
-            def convertir_a_excel(df_coincidencias, df3):
+            def convertir_a_excel():
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df_emparejados.to_excel(writer, sheet_name="Emparejamiento", index=False)
                     df_coincidencias.to_excel(writer, sheet_name="Coincidencias", index=False)
-                    df3.to_excel(writer, sheet_name="Estadísticas", index=False)
+                    df_sin_coincidencia.to_excel(writer, sheet_name="Sin Coincidencia", index=False)
+                    df_estadisticas.to_excel(writer, sheet_name="Estadísticas", index=False)
                 return output.getvalue()
 
-            excel_data = convertir_a_excel(df_coincidencias, df_estadisticas)
-            st.download_button(
-                label="📥 Descargar reporte en Excel",
-                data=excel_data,
-                file_name="reporte-GoXperts.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            excel_data = convertir_a_excel()
+            st.download_button("📥 Descargar reporte en Excel", data=excel_data, file_name="reporte-GoXperts.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
