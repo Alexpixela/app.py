@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from rapidfuzz import process, fuzz  # 🚀 Más rápido que FuzzyWuzzy
+from fuzzywuzzy import fuzz, process
 from openpyxl import Workbook
 from io import BytesIO
 from PIL import Image
