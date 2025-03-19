@@ -3,7 +3,6 @@ import pandas as pd
 from fuzzywuzzy import fuzz, process
 from openpyxl import Workbook
 from io import BytesIO
-from PIL import Image
 
 # 📌 Cargar la imagen original
 imagen = Image.open("go-xpert.png")
