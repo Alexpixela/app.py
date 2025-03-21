@@ -3,5 +3,3 @@ pandas
 openpyxl
 rapidfuzz
 fuzzywuzzy
-io
-PIL
