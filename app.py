@@ -4,6 +4,19 @@ from fuzzywuzzy import fuzz, process
 from openpyxl import Workbook
 from io import BytesIO
 
+from PIL import Image
+import streamlit as st
+
+# 📌 Cargar la imagen original
+imagen = Image.open("go-xpert.png")
+
+# 📌 Redimensionar la imagen al 50% de su tamaño original
+nuevo_tamano = (imagen.width // 2, imagen.height // 2)
+imagen_reducida = imagen.resize(nuevo_tamano)
+
+# 📌 Mostrar la imagen en Streamlit (sin advertencias)
+st.image(imagen_reducida)
+
 st.set_page_config(page_title="Analizador de Excel", page_icon="🔍", layout="wide")
 
 st.title("🔍 Analizador de Coincidencias - SMART")
