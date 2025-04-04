@@ -100,7 +100,12 @@ if archivo1 and archivo2:
                 return output.getvalue()
 
             excel_data = convertir_a_excel(df_emparejados, duplicados_base1, df_estadisticas)
+
+            # ✏️ Campo para que el usuario nombre el archivo
+            nombre_archivo = st.text_input("✏️ Nombre para el archivo Excel", value="reporte-GoXperts")
+
+            # 📥 Botón de descarga con nombre personalizado
             st.download_button(label="📥 Descargar reporte en Excel",
-                               data=excel_data,
-                               file_name="reporte-GoXperts.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                   data=excel_data,
+                   file_name=f"{nombre_archivo}.xlsx",
+                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
