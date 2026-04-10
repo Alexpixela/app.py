@@ -89,15 +89,14 @@ if archivo1 and archivo2:
             st.dataframe(df_estadisticas)
 
             # 📥 **Descarga del archivo en Excel**
-            @st.cache_data
             def convertir_a_excel(df1, df2, df3):
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df1.to_excel(writer, sheet_name="Emparejamiento", index=False)
-                    pd.DataFrame(duplicados_base1, columns=[col1]).to_excel(writer, sheet_name=f"Duplicados {col1}", index=False)
-                    pd.DataFrame(duplicados_base2, columns=[col2]).to_excel(writer, sheet_name=f"Duplicados {col2}", index=False)
-                    df3.to_excel(writer, sheet_name="Estadísticas", index=False)
-                return output.getvalue()
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df1.to_excel(writer, sheet_name="Emparejamiento", index=False)
+            pd.DataFrame(duplicados_base1, columns=[col1]).to_excel(writer, sheet_name=f"Duplicados {col1}", index=False)
+            pd.DataFrame(duplicados_base2, columns=[col2]).to_excel(writer, sheet_name=f"Duplicados {col2}", index=False)
+            df3.to_excel(writer, sheet_name="Estadísticas", index=False)
+            return output.getvalue()
 
             excel_data = convertir_a_excel(df_emparejados, duplicados_base1, df_estadisticas)
 
