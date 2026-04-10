@@ -35,19 +35,22 @@ if archivo1 and archivo2:
             base1 = df1[col1].dropna().astype(str).str.lower().str.strip()
             base2 = df2[col2].dropna().astype(str).str.lower().str.strip()
 
-            # 🔍 **Detectar duplicados**
+            # 🔍 Detectar duplicados
             duplicados_base1 = base1[base1.duplicated(keep=False)].unique()
             duplicados_base2 = base2[base2.duplicated(keep=False)].unique()
 
-            # 🔄 **Fuzzy Matching**
+            # 🔄 Fuzzy Matching
             def emparejar_bases(base1, base2, threshold):
                 emparejados = []
                 base2_usada = set()
 
                 for nombre1 in base1:
                     if pd.isna(nombre1): continue
-                    match = process.extractOne(nombre1, [n for n in base2 if n not in base2_usada], 
-                                             scorer=fuzz.token_sort_ratio)
+                    match = process.extractOne(
+                        nombre1,
+                        [n for n in base2 if n not in base2_usada],
+                        scorer=fuzz.token_sort_ratio
+                    )
                     if match and match[1] >= threshold:
                         emparejados.append([nombre1, match[0], match[1], 'Coincidencia'])
                         base2_usada.add(match[0])
@@ -58,11 +61,14 @@ if archivo1 and archivo2:
                     if nombre2 not in base2_usada:
                         emparejados.append([None, nombre2, 0, 'Sin coincidencia'])
 
-                return pd.DataFrame(emparejados, columns=[f'Base {col1}', f'Base {col2}', 'Similitud (%)', 'Estado'])
+                return pd.DataFrame(
+                    emparejados,
+                    columns=[f'Base {col1}', f'Base {col2}', 'Similitud (%)', 'Estado']
+                )
 
             df_emparejados = emparejar_bases(base1, base2, umbral)
 
-            # 📊 **Generar estadísticas**
+            # 📊 Estadísticas
             total_base1 = len(base1)
             total_base2 = len(base2)
             coincidencias = len(df_emparejados[df_emparejados["Estado"] == "Coincidencia"])
@@ -75,7 +81,7 @@ if archivo1 and archivo2:
                 f"Base {col2}": [total_base2, coincidencias, porcentaje2]
             })
 
-            # Mostrar resultados en la web
+            # Mostrar resultados
             st.write("### 📊 Resultados del Análisis")
             st.dataframe(df_emparejados)
 
@@ -88,23 +94,30 @@ if archivo1 and archivo2:
             st.write("### 📈 Estadísticas")
             st.dataframe(df_estadisticas)
 
-            # 📥 **Descarga del archivo en Excel**
-            def convertir_a_excel(df1, df2, df3):
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df1.to_excel(writer, sheet_name="Emparejamiento", index=False)
-            pd.DataFrame(duplicados_base1, columns=[col1]).to_excel(writer, sheet_name=f"Duplicados {col1}", index=False)
-            pd.DataFrame(duplicados_base2, columns=[col2]).to_excel(writer, sheet_name=f"Duplicados {col2}", index=False)
-            df3.to_excel(writer, sheet_name="Estadísticas", index=False)
-            return output.getvalue()
+            # 📥 Generar Excel (SIN cache)
+            def convertir_a_excel(df1, duplicados1, duplicados2, df3):
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df1.to_excel(writer, sheet_name="Emparejamiento", index=False)
+                    pd.DataFrame(duplicados1, columns=[col1]).to_excel(writer, sheet_name=f"Duplicados {col1}", index=False)
+                    pd.DataFrame(duplicados2, columns=[col2]).to_excel(writer, sheet_name=f"Duplicados {col2}", index=False)
+                    df3.to_excel(writer, sheet_name="Estadísticas", index=False)
+                return output.getvalue()
 
-            excel_data = convertir_a_excel(df_emparejados, duplicados_base1, df_estadisticas)
+            excel_data = convertir_a_excel(
+                df_emparejados,
+                duplicados_base1,
+                duplicados_base2,
+                df_estadisticas
+            )
 
-            # ✏️ Campo para que el usuario nombre el archivo
+            # Nombre del archivo
             nombre_archivo = st.text_input("✏️ Nombre para el archivo Excel", value="reporte-GoXperts")
 
-            # 📥 Botón de descarga con nombre personalizado
-            st.download_button(label="📥 Descargar reporte en Excel",
-                   data=excel_data,
-                   file_name=f"{nombre_archivo}.xlsx",
-                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            # Botón descarga
+            st.download_button(
+                label="📥 Descargar reporte en Excel",
+                data=excel_data,
+                file_name=f"{nombre_archivo}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
