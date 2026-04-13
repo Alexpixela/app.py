@@ -1,6 +1,5 @@
 streamlit
 pandas
-rapidfuzz
+fuzzywuzzy
+python-Levenshtein
 openpyxl
-plotly
-reportlab
